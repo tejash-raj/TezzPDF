@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO & Open Graph Meta Tags -->
+    <title>TezzPDF - Lightning Fast & Private PDF Tools</title>
+    <meta name="description" content="Process, merge, compress, and scan PDFs entirely locally in your browser. Zero server uploads. 100% data privacy.">
+    <meta property="og:title" content="TezzPDF - Lightning Fast & Private">
+    <meta property="og:description" content="Process PDFs entirely locally in your browser. Zero server uploads. 100% data privacy.">
+    <meta property="og:type" content="website">
+    
+    <!-- Core Libraries -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <!-- Tesseract.js for Local AI OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,800&display=swap" rel="stylesheet">
+    
+    <script>
+        // Load theme immediately to prevent flashing
+        const savedTheme = localStorage.getItem('tezzTheme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+
+    <style>
+        /* --- DYNAMIC THEME ENGINE --- */
+        
+        /* Midnight Sky (Dark Mode) - Default */
+        :root {
+            --bg-color: #03040B; 
+            --bg-grad-1: rgba(30, 27, 75, 0.5); 
+            --bg-grad-2: rgba(14, 165, 233, 0.12); 
+            
+            --glass-bg: rgba(255, 255, 255, 0.02);
+            --glass-border: rgba(255, 255, 255, 0.07);
+            --glass-shadow: rgba(0, 0, 0, 0.5);
+            
+            --accent-primary: #818CF8; 
+            --accent-hover: #6366F1;
+            --accent-glow: rgba(129, 140, 248, 0.35);
+            
+            --text-main: #F3F4F6;
+            --text-muted: #9CA3AF;
+            --text-heading: #FFFFFF;
+            
+            --danger: #ef4444;
+            --success: #10b981;
+            
+            --dropzone-bg: rgba(0, 0, 0, 0.4);
+            --item-bg: rgba(255, 255, 255, 0.03);
+            --item-hover: rgba(255, 255, 255, 0.07);
+            --input-bg: rgba(0, 0, 0, 0.4);
+            --footer-bg: rgba(0, 0, 0, 0.7);
+            
+            --logo-grad-1: #ffffff;
+            --logo-grad-2: #818CF8;
+        }
+
+        /* Early Morning Sun (Light Mode) */
+        [data-theme="light"] {
+            --bg-color: #FDFBF7; 
+            --bg-grad-1: rgba(251, 146, 60, 0.15); 
+            --bg-grad-2: rgba(56, 189, 248, 0.15); 
+            
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.9);
+            --glass-shadow: rgba(0, 0, 0, 0.05);
+            
+            --accent-primary: #F97316; 
+            --accent-hover: #EA580C;
+            --accent-glow: rgba(249, 115, 22, 0.3);
+            
+            --text-main: #1F2937; 
+            --text-muted: #4B5563;
+            --text-heading: #111827;
+            
+            --dropzone-bg: rgba(255, 255, 255, 0.5);
+            --item-bg: rgba(255, 255, 255, 0.7);
+            --item-hover: rgba(255, 255, 255, 0.95);
+            --input-bg: rgba(255, 255, 255, 0.8);
+            --footer-bg: rgba(255, 255, 255, 0.6);
+            
+            --logo-grad-1: #EA580C; 
+            --logo-grad-2: #FCD34D; 
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; padding: 0; min-height: 100vh;
+            display: flex; flex-direction: column; align-items: center; width: 100%; overflow-x: hidden;
+            color: var(--text-main); background-color: var(--bg-color);
+            background-image: radial-gradient(at 0% 0%, var(--bg-grad-1) 0px, transparent 50%), radial-gradient(at 100% 100%, var(--bg-grad-2) 0px, transparent 50%);
+            background-attachment: fixed; transition: background-color 0.4s ease;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 8px 32px var(--glass-shadow);
+            transition: background 0.4s ease, border 0.4s ease, box-shadow 0.4s ease;
+        }
+
+        /* --- STICKY NAV --- */
+        .navbar {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 1000px; 
+            display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; 
+            border-radius: 50px; z-index: 1000; box-sizing: border-box;
+        }
+        .nav-logo { 
+            font-family: 'Exo 2', sans-serif; font-style: italic; font-weight: 800; font-size: 1.5rem; letter-spacing: -1px; margin: 0; 
+            background: linear-gradient(135deg, var(--logo-grad-1) 0%, var(--logo-grad-2) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            transform: skewX(-5deg); text-decoration: none;
+        }
+        .nav-controls { display: flex; gap: 10px; align-items: center; }
+        .theme-toggle-btn {
+            background: var(--input-bg); border: 1px solid var(--glass-border); color: var(--text-main);
+            width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1.1rem; transition: all 0.2s ease; box-shadow: 0 4px 12px var(--glass-shadow);
+        }
+        .theme-toggle-btn:hover { transform: scale(1.05); }
+        .nav-try-btn {
+            background: var(--accent-primary); color: #fff; padding: 8px 20px; border-radius: 50px; 
+            text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: all 0.2s ease; box-shadow: 0 4px 12px var(--accent-glow);
+        }
+        .nav-try-btn:hover { background: var(--accent-hover); transform: translateY(-2px); color: #fff; }
+
+        /* --- CENTRED HERO SECTION --- */
+        .hero { 
+            display: flex; flex-direction: column; align-items: center; text-align: center; 
+            padding: 100px 15px 20px; width: 100%; max-width: 900px; margin: 0 auto; box-sizing: border-box; 
+        }
+        .logo { 
+            font-family: 'Exo 2', sans-serif; font-style: italic; font-weight: 800; font-size: 4.5rem; letter-spacing: -2px; margin: 0; 
+            background: linear-gradient(135deg, var(--logo-grad-1) 0%, var(--logo-grad-2) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            filter: drop-shadow(0px 4px 24px var(--accent-glow)); transform: skewX(-5deg); transition: filter 0.4s ease;
+        }
+        .hero-tagline { font-size: 1.1rem; color: var(--text-muted); margin: 5px 0 20px 0; text-align: center; }
+        
+        .hero-info { 
+            padding: 25px; width: 100%; max-width: 800px; margin: 0 auto 20px auto; 
+            text-align: center; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; 
+        }
+        .hero-info h2 { margin-top: 0; color: var(--text-heading); font-size: 1.4rem; margin-bottom: 10px; text-align: center; width: 100%;}
+        .hero-info p { color: var(--text-muted); line-height: 1.6; font-size: 0.95rem; margin: 0; text-align: center; width: 100%;}
+        .hero-info strong { color: var(--accent-primary); }
+
+        .features-grid { 
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; 
+            width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; 
+        }
+        .feature-card { 
+            padding: 20px; text-align: center; border-radius: 16px; border: 1px solid var(--glass-border); 
+            background: var(--item-bg); transition: background 0.4s ease;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .feature-card h4 { margin: 0 0 10px 0; color: var(--text-heading); font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        .feature-card p { color: var(--text-muted); font-size: 0.85rem; line-height: 1.4; margin: 0; text-align: center; }
+
+        .cta-section { margin-top: 25px; display: flex; flex-direction: column; align-items: center; }
+        .scroll-down-btn { 
+            display: inline-block; background: var(--accent-primary); color: #fff; padding: 14px 32px; border-radius: 50px; 
+            font-weight: 600; font-size: 1.05rem; text-decoration: none; transition: all 0.3s ease; box-shadow: 0 8px 24px var(--accent-glow); 
+        }
+        .scroll-down-btn:hover { background: var(--accent-hover); transform: translateY(-3px); box-shadow: 0 12px 28px var(--accent-glow); color: #fff; }
+        .micro-copy { margin-top: 10px; font-size: 0.85rem; color: var(--text-muted); font-style: italic; text-align: center;}
+
+        /* --- CENTRED TOOLS HUB --- */
+        .content { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; 
+            padding: 40px 15px 60px; width: 100%; max-width: 900px; margin: 0 auto; box-sizing: border-box; 
+        }
+        
+        .tab-buttons { 
+            display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 30px; 
+            padding: 10px; border-radius: 100px; width: 100%; box-sizing: border-box;
+        }
+        .tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 10px 18px; border-radius: 50px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.3s ease; }
+        .tab-btn:hover { color: var(--text-heading); }
+        .tab-btn.active-tab { 
+            background: var(--accent-primary); 
+            color: #fff; 
+            box-shadow: 0 4px 15px var(--accent-glow); 
+            border: 1px solid var(--accent-hover);
+        }
+
+        /* --- CSS TOOLTIP --- */
+        .has-tooltip { position: relative; -webkit-touch-callout: none; user-select: none; }
+        .has-tooltip::after {
+            content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%) translateY(10px);
+            background: var(--text-heading); color: var(--bg-color); padding: 12px 16px; border-radius: 12px; font-size: 0.8rem; line-height: 1.5;
+            white-space: normal; width: max-content; max-width: 240px; text-align: center; opacity: 0; visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 1px solid var(--accent-primary);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3), 0 0 15px var(--accent-glow); z-index: 100; pointer-events: none;
+        }
+        .has-tooltip::before {
+            content: ''; position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%) translateY(10px); border-width: 8px;
+            border-style: solid; border-color: var(--accent-primary) transparent transparent transparent; opacity: 0; visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 100; margin-bottom: -16px; pointer-events: none;
+        }
+        .has-tooltip:hover::after, .has-tooltip:hover::before, .has-tooltip:active::after, .has-tooltip:active::before { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+
+        .tool-section { 
+            display: none; width: 100%; max-width: 650px; padding: 40px 20px; 
+            box-sizing: border-box; margin: 0 auto; text-align: center; 
+        }
+        .tool-section.active { 
+            display: flex; flex-direction: column; align-items: center; animation: fadeIn 0.3s ease-out; 
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        h3 { margin: 0 0 5px 0; font-size: 1.5rem; font-weight: 600; color: var(--text-heading); text-align: center;}
+        p.subtitle { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 25px 0; text-align: center;}
+
+        .dropzone { 
+            width: 100%; border: 2px dashed var(--accent-primary); border-radius: 20px; padding: 50px 20px; 
+            text-align: center; cursor: pointer; transition: all 0.3s ease; background: var(--dropzone-bg); 
+            margin: 0 auto 20px auto; box-sizing: border-box; display: flex; flex-direction: column; align-items: center;
+        }
+        .dropzone:hover, .dropzone.dragover { border-color: var(--accent-hover); background: var(--bg-grad-1); transform: scale(1.01); }
+        .dropzone svg { width: 48px; height: 48px; fill: var(--accent-primary); margin-bottom: 15px; transition: transform 0.3s; }
+        .dropzone:hover svg { transform: translateY(-5px); }
+        .dropzone p { margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-heading); text-align: center;}
+        .dropzone span { display: block; font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; text-align: center;}
+
+        /* --- DESKTOP FILE QUEUE --- */
+        .file-list { margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; width: 100%; align-items: center;}
+        .file-item { width: 100%; max-width: 500px; display: flex; align-items: center; background: var(--item-bg); border: 1px solid var(--glass-border); padding: 10px; border-radius: 12px; gap: 12px; transition: background 0.2s; text-align: left; box-sizing: border-box;}
+        .file-item:hover { background: var(--item-hover); }
+        .drag-handle { cursor: grab; color: var(--text-muted); font-size: 1.5rem; display: flex; align-items: center; padding: 5px 10px; }
+        .drag-handle:active { cursor: grabbing; }
+        
+        .thumb-container { 
+            width: 40px; height: 50px; border-radius: 6px; background: rgba(0,0,0,0.2); 
+            display: flex; align-items: center; justify-content: center; overflow: hidden; 
+            border: 1px solid var(--glass-border); font-size: 0.7rem; color: var(--text-muted); flex-shrink: 0;
+        }
+        .thumb-container canvas, .thumb-container img { max-width: 100%; max-height: 100%; object-fit: contain; background: white; }
+
+        .file-info { flex: 1; overflow: hidden; }
+        .file-name { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; color: var(--text-main); }
+        .file-size { font-size: 0.8rem; color: var(--text-muted); margin-top: 3px; }
+        
+        .file-actions { display: flex; gap: 8px; }
+        .icon-btn { background: var(--input-bg); border: 1px solid var(--glass-border); color: var(--text-main); border-radius: 6px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; }
+        .icon-btn:hover { background: var(--item-hover); }
+        .btn-danger:hover { background: var(--danger); color: white; border-color: var(--danger); }
+
+        /* --- COMPRESSOR UI (WITH RADIO INDICATORS) --- */
+        .compress-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 auto 20px auto; width: 100%; max-width: 600px; box-sizing: border-box;}
+        .comp-label { cursor: pointer; display: block; }
+        .comp-label input[type="radio"] { display: none; }
+        .comp-card { 
+            position: relative; padding: 15px; border: 1px solid var(--glass-border); border-radius: 12px; 
+            background: var(--input-bg); transition: all 0.2s; text-align: center; height: 100%; box-sizing: border-box;
+        }
+        .comp-card::before {
+            content: ''; position: absolute; top: 10px; right: 10px; width: 14px; height: 14px;
+            border-radius: 50%; border: 2px solid var(--glass-border); transition: all 0.2s;
+        }
+        .comp-label input[type="radio"]:checked + .comp-card { border-color: var(--accent-primary); background: var(--bg-grad-1); box-shadow: 0 0 10px var(--accent-glow); }
+        .comp-label input[type="radio"]:checked + .comp-card::before {
+            border-color: var(--accent-primary); background: var(--accent-primary); box-shadow: inset 0 0 0 3px var(--bg-color);
+        }
+        
+        .comp-card h4 { margin: 0 0 5px 0; color: var(--text-heading); font-size: 1rem; }
+        .comp-card p { margin: 0; font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+
+        /* --- CONTROLS --- */
+        input[type="number"], textarea { background: var(--input-bg); border: 1px solid var(--glass-border); color: var(--text-main); padding: 10px; border-radius: 8px; font-family: inherit; transition: border 0.3s; box-sizing: border-box; text-align: center;}
+        input[type="number"]:focus, textarea:focus { outline: none; border-color: var(--accent-primary); }
+        textarea { width: 100%; max-width: 500px; margin: 0 auto 20px auto; resize: vertical; }
+        
+        .action-btn { background: var(--accent-primary); color: #fff; border: none; padding: 14px 28px; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s ease, transform 0.1s ease; width: 100%; max-width: 400px; margin: 0 auto; display: block; box-sizing: border-box; box-shadow: 0 4px 15px var(--accent-glow); }
+        .action-btn:hover { background: var(--accent-hover); color: #fff;}
+        .action-btn:active { transform: scale(0.98); }
+        .action-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; width: 100%; max-width: 400px; margin: 0 auto;}
+        .btn-group .action-btn { flex: 1; }
+        .log { margin-top: 15px; font-weight: 500; font-size: 0.9rem; text-align: center; min-height: 20px; line-height: 1.5; width: 100%;}
+
+        /* --- MODALS & TOASTS --- */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { padding: 40px; max-width: 400px; text-align: center; animation: modalPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); margin: 0 auto;}
+        @keyframes modalPop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .modal-actions { display: flex; flex-direction: column; align-items: center; gap: 15px; margin-top: 20px;}
+        .modal-content h3 { color: var(--text-heading); text-align: center;}
+        
+        .toast-notification {
+            position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+            background: var(--accent-primary); color: white; padding: 14px 24px;
+            border-radius: 50px; font-weight: 500; font-size: 0.95rem; box-shadow: 0 10px 30px var(--glass-shadow);
+            transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 9999;
+            backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); text-align: center;
+        }
+        .toast-notification.show { bottom: 40px; }
+
+        .footer { padding: 40px 20px; text-align: center; background: var(--footer-bg); border-top: 1px solid var(--glass-border); backdrop-filter: blur(10px); margin-top: auto; transition: background 0.4s ease; width: 100%; box-sizing: border-box;}
+        .footer p { color: var(--text-muted); margin-bottom: 15px; font-size: 0.95rem; }
+        .footer strong { color: var(--text-heading); }
+        .portfolio-btn { background: transparent; color: var(--text-main); border: 1px solid var(--glass-border); padding: 10px 24px; border-radius: 50px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; text-decoration: none; display: inline-block; background: var(--item-bg); }
+        .portfolio-btn:hover { background: var(--bg-grad-1); border-color: var(--accent-primary); color: var(--accent-primary); }
+
+        /* --- MOBILE RESPONSIVE UI POLISH --- */
+        .dz-text-mobile { display: none; }
+        
+        @media (max-width: 768px) {
+            .hero { padding: 90px 15px 20px; }
+            .logo { font-size: 3.5rem; }
+            .tool-section { padding: 25px 15px; }
+            .compress-options { grid-template-columns: 1fr; max-width: 400px; }
+            
+            /* Horizontal Swiping Tabs */
+            .tab-buttons { 
+                flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; padding-bottom: 5px; 
+                -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; border-radius: 20px;
+            }
+            .tab-buttons::-webkit-scrollbar { display: none; }
+            .tab-btn { scroll-snap-align: center; white-space: nowrap; flex-shrink: 0; }
+            
+            /* Disable Tooltips on Touch to Prevent Selection Confusion */
+            .has-tooltip::after, .has-tooltip::before { display: none !important; }
+
+            .dz-text-desktop { display: none; }
+            .dz-text-mobile { display: inline; }
+            .dropzone { padding: 40px 15px; }
+
+            /* Mobile File Cards */
+            .file-item { flex-direction: column; text-align: center; padding: 15px; }
+            .drag-handle { display: none; }
+            .thumb-container { margin: 0 auto; width: 60px; height: 80px; }
+            .file-info { width: 100%; text-align: center; }
+            .file-name { white-space: normal; word-break: break-all; }
+            .file-actions { justify-content: center; width: 100%; margin-top: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- STICKY NAVBAR WITH THEME TOGGLE -->
+    <nav class="navbar glass-panel">
+        <a href="#" class="nav-logo">TezzPDF</a>
+        <div class="nav-controls">
+            <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Switch Theme">🌙</button>
+            <a href="#tools-hub" class="nav-try-btn">Try Now</a>
+        </div>
+    </nav>
+
+    <input type="file" id="globalReplaceInput" style="display: none;" onchange="handleReplaceFile(event)">
+
+    <!-- CENTRED HERO SECTION -->
+    <div class="hero">
+        <h1 class="logo">TezzPDF</h1>
+        <p class="hero-tagline">The ultimate privacy-first document utility suite.</p>
+        
+        <div class="glass-panel hero-info">
+            <h2>How it works: Total Privacy & Zero Latency</h2>
+            <p>Unlike traditional editors that force you to upload sensitive documents to a cloud server, TezzPDF processes files entirely locally inside your browser using mathematical models. <strong>Your data never leaves your screen.</strong> This guarantees 100% privacy and eliminates upload wait times.</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <h4>🔒 Absolute Privacy</h4>
+                <p>No servers. Files vanish when you close the tab.</p>
+            </div>
+            <div class="feature-card">
+                <h4>⚡ Lightning Fast</h4>
+                <p>Zero upload latency. Powered by your local CPU.</p>
+            </div>
+            <div class="feature-card">
+                <h4>🛠️ Pro Features</h4>
+                <p>Merge, compress, extract, and scan entirely locally.</p>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <a href="#tools-hub" class="scroll-down-btn">Try TezzPDF for Free</a>
+            <p class="micro-copy">No sign-up. No watermarks. 100% private.</p>
+        </div>
+    </div>
+
+    <!-- MAIN TOOLS -->
+    <div id="tools-hub" class="content">
+        <div class="tab-buttons glass-panel">
+            <button class="tab-btn active-tab has-tooltip" data-tooltip="Combine multiple PDFs into a single, organized document." onclick="switchTab('mergeTool', this)">Merge</button>
+            <button class="tab-btn has-tooltip" data-tooltip="Reduce PDF file size locally for easier sharing and faster uploads." onclick="switchTab('compressTool', this)">Compress</button>
+            <button class="tab-btn has-tooltip" data-tooltip="Extract specific pages or page ranges from a larger PDF." onclick="switchTab('splitTool', this)">Split</button>
+            <button class="tab-btn has-tooltip" data-tooltip="Convert JPG, PNG, and WebP images into a single PDF document." onclick="switchTab('imgToPdfTool', this)">Images to PDF</button>
+            <button class="tab-btn has-tooltip" data-tooltip="Extract individual PDF pages as high-quality images (PNG/ZIP)." onclick="switchTab('pdfToImgTool', this)">PDF to Image</button>
+            <button class="tab-btn has-tooltip" data-tooltip="Extract digital, selectable text layers from standard PDFs." onclick="switchTab('pdfToTextTool', this)">PDF to Text</button>
+            <button class="tab-btn has-tooltip" data-tooltip="Create a brand new PDF document perfectly centered from raw text." onclick="switchTab('textTool', this)">Text to PDF</button>
+            <button class="tab-btn has-tooltip" data-tooltip="Uses local AI to read flattened images or scanned PDFs and extract text." onclick="switchTab('ocrTool', this)">✨ OCR Scanner</button>
+        </div>
+
+        <!-- TOOL 1: MERGE PDFs -->
+        <div id="mergeTool" class="tool-section glass-panel active">
+            <h3>Merge PDFs</h3>
+            <p class="subtitle">Drag & reorder multiple documents into a single PDF.</p>
+            <div class="dropzone" id="dz-mergeTool" onclick="triggerInput('mergeTool', true)">
+                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.36 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                <p><span class="dz-text-desktop">Drag & drop PDFs here</span><span class="dz-text-mobile">Tap to upload PDFs</span></p>
+                <span>or click to browse files</span>
+                <input type="file" id="input-mergeTool" accept="application/pdf" multiple hidden onchange="handleFiles(this.files, 'mergeTool')">
+            </div>
+            <div class="file-list" id="list-mergeTool"></div>
+            <button class="action-btn" onclick="mergePDFs()">Execute Merge</button>
+            <div id="mergeLog" class="log"></div>
+        </div>
+
+        <!-- TOOL 2: COMPRESS PDF -->
+        <div id="compressTool" class="tool-section glass-panel">
+            <h3>Compress PDF</h3>
+            <p class="subtitle">Reduce file size locally. <em style="font-size:0.8rem; opacity:0.7;">(Note: Flattens document for optimal compression)</em></p>
+            <div class="dropzone" id="dz-compressTool" onclick="triggerInput('compressTool', false)">
+                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.36 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                <p><span class="dz-text-desktop">Drag & drop a PDF here</span><span class="dz-text-mobile">Tap to upload a PDF</span></p>
+                <span>or click to browse files</span>
+                <input type="file" id="input-compressTool" accept="application/pdf" hidden onchange="handleFiles(this.files, 'compressTool')">
+            </div>
+            <div class="file-list" id="list-compressTool"></div>
+            <div class="compress-options">
+                <label class="comp-label">
+                    <input type="radio" name="compLevel" value="high">
+                    <div class="comp-card"><h4>High Quality</h4><p>Minimal compression.</p></div>
+                </label>
+                <label class="comp-label">
+                    <input type="radio" name="compLevel" value="medium" checked>
+                    <div class="comp-card"><h4>Medium Quality</h4><p>Balanced size.</p></div>
+                </label>
+                <label class="comp-label">
+                    <input type="radio" name="compLevel" value="low">
+                    <div class="comp-card"><h4>Low Quality</h4><p>Maximum compression.</p></div>
+                </label>
+            </div>
+            <button class="action-btn" onclick="compressPDF()">Compress File</button>
+            <div id="compressLog" class="log"></div>
+        </div>
+
+        <!-- TOOL 3: SPLIT PDF -->
+        <div id="splitTool" class="tool-section glass-panel">
+            <h3>Split PDF</h3>
+            <p class="subtitle">Extract a specific page range from a document.</p>
+            <div class="dropzone" id="dz-splitTool" onclick="triggerInput('splitTool', false)">
+                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.36 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                <p><span class="dz-text-desktop">Drag & drop a PDF here</span><span class="dz-text-mobile">Tap to upload a PDF</span></p>
+                <span>or click to browse files</span>
+                <input type="file" id="input-splitTool" accept="application/pdf" hidden onchange="handleFiles(this.files, 'splitTool')">
+            </div>
+            <div class="file-list" id="list-splitTool"></div>
+            <div style="display: flex; gap: 20px; margin-bottom: 20px; justify-content: center; width: 100%;">
+                <label style="color: var(--text-muted)">Start Page: <input type="number" id="startPage" min="1" value="1" style="width:70px; text-align:center;"/></label>
+                <label style="color: var(--text-muted)">End Page: <input type="number" id="endPage" min="1" value="1" style="width:70px; text-align:center;"/></label>
+            </div>
+            <button class="action-btn" onclick="splitPDF()">Extract Range</button>
+            <div id="splitLog" class="log"></div>
+        </div>
+
+        <!-- TOOL 4: IMAGES TO PDF -->
+        <div id="imgToPdfTool" class="tool-section glass-panel">
+            <h3>Images to PDF</h3>
+            <p class="subtitle">Drag & reorder JPG/PNG images to generate a PDF.</p>
+            <div class="dropzone" id="dz-imgToPdfTool" onclick="triggerInput('imgToPdfTool', true)">
+                <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                <p><span class="dz-text-desktop">Drag & drop Images here</span><span class="dz-text-mobile">Tap to upload Images</span></p>
+                <span>or click to browse files</span>
+                <input type="file" id="input-imgToPdfTool" accept="image/jpeg, image/png, image/webp" multiple hidden onchange="handleFiles(this.files, 'imgToPdfTool')">
+            </div>
+            <div class="file-list" id="list-imgToPdfTool"></div>
+            <button class="action-btn" onclick="imagesToPDF()">Generate PDF</button>
+            <div id="imgLog" class="log"></div>
+        </div>
+
+        <!-- TOOL 5: PDF TO IMAGES -->
+        <div id="pdfToImgTool" class="tool-section glass-panel">
+            <h3>PDF to Image</h3>
+            <p class="subtitle">1 page = PNG download. Multiple pages = ZIP archive.</p>
+            <div class="dropzone" id="dz-pdfToImgTool" onclick="triggerInput('pdfToImgTool', false)">
+                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.36 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                <p><span class="dz-text-desktop">Drag & drop a PDF here</span><span class="dz-text-mobile">Tap to upload a PDF</span></p>
+                <span>or click to browse files</span>
+                <input type="file" id="input-pdfToImgTool" accept="application/pdf" hidden onchange="handleFiles(this.files, 'pdfToImgTool')">
+            </div>
+            <div class="file-list" id="list-pdfToImgTool"></div>
+            <button class="action-btn" onclick="processPdfToImage()">Convert to Image(s)</button>
+            <div id="imageLog" class="log"></div>
+        </div>
+
+        <!-- TOOL 6: PDF TO TEXT / DOC -->
+        <div id="pdfToTextTool" class="tool-section glass-panel">
+            <h3>PDF to Text / Word</h3>
+            <p class="subtitle">Extract digital text layers from a standard PDF.</p>
+            <div class="dropzone" id="dz-pdfToTextTool" onclick="triggerInput('pdfToTextTool', false)">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                <p><span class="dz-text-desktop">Drag & drop a PDF here</span><span class="dz-text-mobile">Tap to upload a PDF</span></p>
+                <span>or click to browse files</span>
+                <input type="file" id="input-pdfToTextTool" accept="application/pdf" hidden onchange="handleFiles(this.files, 'pdfToTextTool')">
+            </div>
+            <div class="file-list" id="list-pdfToTextTool"></div>
+            <div class="btn-group">
+                <button class="action-btn" onclick="extractText('txt')">Extract as .TXT</button>
+                <button class="action-btn" onclick="extractText('doc')" style="background: var(--input-bg); border: 1px solid var(--glass-border); color: var(--text-main); box-shadow:none;">Extract as .DOC</button>
+            </div>
+            <div id="docLog" class="log"></div>
+        </div>
+
+        <!-- TOOL 7: TEXT TO PDF (WITH CENTER ALIGNMENT MATH) -->
+        <div id="textTool" class="tool-section glass-panel">
+            <h3>Text to PDF</h3>
+            <p class="subtitle">Type or paste content to instantly generate a perfectly centered PDF.</p>
+            <textarea id="textInput" rows="8" placeholder="Enter your text here..."></textarea>
+            <button class="action-btn" onclick="textToPDF()">Generate Centered PDF</button>
+            <div id="textLog" class="log"></div>
+        </div>
+
+        <!-- TOOL 8: OCR SCANNER (AI) -->
+        <div id="ocrTool" class="tool-section glass-panel">
+            <h3>AI OCR Scanner</h3>
+            <p class="subtitle">Extract text from scanned images and flattened PDFs using local browser AI.</p>
+            <div class="dropzone" id="dz-ocrTool" onclick="triggerInput('ocrTool', false)">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                <p><span class="dz-text-desktop">Drag & drop an Image or PDF</span><span class="dz-text-mobile">Tap to upload file</span></p>
+                <span>English language supported. (Processes first page of PDFs)</span>
+                <input type="file" id="input-ocrTool" accept="application/pdf, image/jpeg, image/png, image/webp" hidden onchange="handleFiles(this.files, 'ocrTool')">
+            </div>
+            
+            <div class="file-list" id="list-ocrTool"></div>
+            <button class="action-btn" id="ocrBtn" onclick="runOCR()">Scan & Extract Text</button>
+            <div id="ocrLog" class="log"></div>
+            <textarea id="ocrOutput" rows="6" placeholder="Extracted text will appear here..." style="margin-top:20px; display:none; text-align: left;"></textarea>
+        </div>
+
+    </div>
+
+    <!-- RETENTION TOAST -->
+    <div id="bookmark-toast" class="toast-notification">
+        ⚡ Love the speed? Press <strong id="bookmark-key">Ctrl+D</strong> to bookmark TezzPDF!
+    </div>
+
+    <!-- FEEDBACK MODAL -->
+    <div id="feedbackModal" class="modal-overlay">
+        <div class="modal-content glass-panel">
+            <h3 style="color:var(--text-heading); margin-top:0;">Download Complete! 🎉</h3>
+            <p style="color:var(--text-muted);">I built TezzPDF as a privacy-first web tool for my UI/UX portfolio. Your feedback would massively help me improve it!</p>
+            <div class="modal-actions">
+                <a href="mailto:tejash.designer@gmail.com?subject=Feedback on TezzPDF UI/UX" class="action-btn" style="color:#fff;" onclick="window.closeFeedbackModal()">Give Feedback</a>
+                <button class="tab-btn" style="width:100%; border:1px solid var(--glass-border);" onclick="window.closeFeedbackModal()">Maybe Later</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <p>Developed & Designed by <strong>Tejash Raj (IITG)</strong></p>
+        <a href="https://www.behance.net/tejashraj" target="_blank" rel="noopener noreferrer" class="portfolio-btn">Check more work</a>
+    </div>
+
+    <script>
+        // --- GLOBAL UI FUNCTIONS ---
+        window.showFeedbackModal = function() {
+            document.getElementById('feedbackModal').style.display = 'flex';
+        };
+        window.closeFeedbackModal = function() {
+            document.getElementById('feedbackModal').style.display = 'none';
+        };
+
+        // --- THEME TOGGLE LOGIC ---
+        window.toggleTheme = function() {
+            const body = document.documentElement;
+            const currentTheme = body.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('tezzTheme', newTheme);
+            document.getElementById('themeToggleBtn').innerText = newTheme === 'light' ? '☀️' : '🌙';
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            document.getElementById('themeToggleBtn').innerText = currentTheme === 'light' ? '☀️' : '🌙';
+        });
+
+        // Setup PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const appFiles = { 
+            'mergeTool': [], 'compressTool': [], 'splitTool': [], 
+            'imgToPdfTool': [], 'pdfToImgTool': [], 'pdfToTextTool': [], 'textTool': [], 'ocrTool': [] 
+        };
+        let activeTool = 'mergeTool';
+        let replacingIndex = null; 
+
+        // --- UI & TABS ---
+        window.switchTab = function(tabId, btnElement) {
+            document.querySelectorAll('.tool-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
+            btnElement.classList.add('active-tab');
+            document.querySelectorAll('.log').forEach(el => el.innerText = ''); 
+            activeTool = tabId;
+        };
+
+        // --- FILE INGESTION ---
+        window.triggerInput = function(toolId, allowMultiple) {
+            const input = document.getElementById(`input-${toolId}`);
+            if(!allowMultiple) input.removeAttribute('multiple');
+            input.click();
+        };
+
+        window.handleFiles = function(files, toolId) {
+            const fileArray = Array.from(files);
+            if (['splitTool', 'pdfToImgTool', 'pdfToTextTool', 'compressTool', 'ocrTool'].includes(toolId)) {
+                appFiles[toolId] = [fileArray[0]];
+            } else {
+                appFiles[toolId] = appFiles[toolId].concat(fileArray);
+            }
+            renderFileList(toolId);
+            document.getElementById(`input-${toolId}`).value = ''; 
+        };
+
+        document.querySelectorAll('.dropzone').forEach(zone => {
+            zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+            zone.addEventListener('dragleave', e => { e.preventDefault(); zone.classList.remove('dragover'); });
+            zone.addEventListener('drop', e => {
+                e.preventDefault(); zone.classList.remove('dragover');
+                const toolId = zone.id.replace('dz-', '');
+                if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files, toolId);
+            });
+        });
+
+        // --- UI RENDERING & VISUAL THUMBNAILS ---
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024, sizes = ['Bytes', 'KB', 'MB'], i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function renderFileList(toolId) {
+            const listEl = document.getElementById(`list-${toolId}`);
+            if(!listEl) return;
+            listEl.innerHTML = ''; 
+            
+            appFiles[toolId].forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item'; item.setAttribute('data-index', index);
+                const thumbId = `thumb-${toolId}-${index}`;
+                
+                item.innerHTML = `
+                    <div class="drag-handle" title="Drag to reorder">⋮⋮</div>
+                    <div class="thumb-container" id="${thumbId}">...</div>
+                    <div class="file-info">
+                        <div class="file-name" title="${file.name}">${file.name}</div>
+                        <div class="file-size">${formatBytes(file.size)}</div>
+                    </div>
+                    <div class="file-actions">
+                        <button class="icon-btn" onclick="triggerReplace('${toolId}', ${index})" title="Replace">↻</button>
+                        <button class="icon-btn btn-danger" onclick="removeFile('${toolId}', ${index})" title="Remove">✕</button>
+                    </div>
+                `;
+                listEl.appendChild(item);
+                generateThumbnail(file, thumbId);
+            });
+
+            Sortable.create(listEl, {
+                handle: '.drag-handle', animation: 150,
+                onEnd: function (evt) {
+                    const movedItem = appFiles[toolId].splice(evt.oldIndex, 1)[0];
+                    appFiles[toolId].splice(evt.newIndex, 0, movedItem);
+                }
+            });
+        }
+
+        async function generateThumbnail(file, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                container.innerHTML = ''; container.appendChild(img);
+            } else if (file.type === 'application/pdf') {
+                try {
+                    const url = URL.createObjectURL(file);
+                    const pdf = await pdfjsLib.getDocument(url).promise;
+                    const page = await pdf.getPage(1);
+                    const viewport = page.getViewport({ scale: 0.3 }); 
+                    const canvas = document.createElement('canvas');
+                    canvas.height = viewport.height; canvas.width = viewport.width;
+                    await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+                    container.innerHTML = ''; container.appendChild(canvas);
+                } catch (e) { container.innerHTML = '🔒'; }
+            } else { container.innerHTML = 'FILE'; }
+        }
+
+        window.removeFile = function(toolId, index) { appFiles[toolId].splice(index, 1); renderFileList(toolId); };
+
+        window.triggerReplace = function(toolId, index) {
+            replacingIndex = index;
+            let accept = "application/pdf";
+            if(toolId === 'imgToPdfTool') accept = "image/jpeg, image/png, image/webp";
+            if(toolId === 'ocrTool') accept = "image/jpeg, image/png, image/webp, application/pdf";
+            const repInput = document.getElementById('globalReplaceInput');
+            repInput.setAttribute('accept', accept); repInput.click();
+        };
+
+        window.handleReplaceFile = function(event) {
+            if (event.target.files.length > 0 && replacingIndex !== null) {
+                appFiles[activeTool][replacingIndex] = event.target.files[0];
+                renderFileList(activeTool);
+            }
+            event.target.value = ''; replacingIndex = null;
+        };
+
+        // --- UTILS, BRANDED NAMING & FEEDBACK ---
+        function getOutputName(toolId, suffix, ext) {
+            if (appFiles[toolId] && appFiles[toolId].length > 0) {
+                const originalName = appFiles[toolId][0].name;
+                const base = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+                return `${base}_TezzPDF_${suffix}.${ext}`;
+            }
+            return `TezzPDF_${suffix}.${ext}`;
+        }
+
+        let hasDownloaded = false;
+        function showBookmarkToast() {
+            if(!hasDownloaded) {
+                hasDownloaded = true;
+                setTimeout(() => {
+                    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                    document.getElementById('bookmark-key').innerText = isMac ? 'Cmd+D' : 'Ctrl+D';
+                    const toast = document.getElementById('bookmark-toast');
+                    toast.classList.add('show');
+                    setTimeout(() => toast.classList.remove('show'), 6000);
+                }, 4000);
+            }
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            setTimeout(window.showFeedbackModal, 1500); 
+            showBookmarkToast();
+        }
+
+        function updateLog(id, msg, isError = false) {
+            const el = document.getElementById(id); el.innerText = msg; 
+            el.style.color = isError ? "var(--danger)" : "var(--accent-primary)";
+        }
+
+        // --- CORE ENGINES (WITH WHITE BACKGROUND + MEMORY FIXES) ---
+        
+        window.compressPDF = async function() {
+            const files = appFiles['compressTool'];
+            if (files.length === 0) return updateLog('compressLog', "Queue a PDF first.", true);
+            const file = files[0];
+            
+            const level = document.querySelector('input[name="compLevel"]:checked').value;
+            
+            let scale = 2.0; let quality = 0.65; 
+            if (level === 'high') { scale = 3.0; quality = 0.85; }
+            if (level === 'medium') { scale = 2.0; quality = 0.60; }
+            if (level === 'low') { scale = 1.5; quality = 0.40; }
+
+            updateLog('compressLog', "Compressing locally via canvas rendering... This may take a moment.");
+            
+            try {
+                const fileURL = URL.createObjectURL(file);
+                const pdf = await pdfjsLib.getDocument(fileURL).promise;
+                const newPdf = await PDFLib.PDFDocument.create();
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    let viewport = page.getViewport({ scale: scale }); 
+                    
+                    const maxDim = 3500;
+                    if(viewport.width > maxDim || viewport.height > maxDim) {
+                        const safeScale = Math.min(maxDim / viewport.width, maxDim / viewport.height);
+                        viewport = page.getViewport({ scale: scale * safeScale });
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.ceil(viewport.width);
+                    canvas.height = Math.ceil(viewport.height);
+                    const ctx = canvas.getContext('2d');
+
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                    
+                    const imgBytes = await new Promise((resolve, reject) => {
+                        canvas.toBlob(blob => {
+                            if(!blob) return reject(new Error("Canvas memory limit exceeded."));
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.readAsArrayBuffer(blob);
+                        }, 'image/jpeg', quality);
+                    });
+                    
+                    const jpgImage = await newPdf.embedJpg(imgBytes);
+                    const newPage = newPdf.addPage([canvas.width, canvas.height]);
+                    newPage.drawImage(jpgImage, { x: 0, y: 0, width: canvas.width, height: canvas.height });
+                }
+
+                const pdfBytes = await newPdf.save();
+                downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), getOutputName('compressTool', 'Compressed', 'pdf'));
+                updateLog('compressLog', "Success! Document compressed.");
+            } catch (err) { 
+                if(err.message && (err.message.includes("Password") || err.name === "PasswordException")) {
+                    updateLog('compressLog', "Error: File is password protected. TezzPDF cannot process locked files.", true);
+                } else { updateLog('compressLog', "Compression Error: " + err.message, true); }
+            }
+        };
+
+        window.mergePDFs = async function() {
+            const files = appFiles['mergeTool'];
+            if (files.length < 2) return updateLog('mergeLog', "Queue at least 2 PDFs to merge.", true);
+            updateLog('mergeLog', "Merging documents locally...");
+            try {
+                const mergedPdf = await PDFLib.PDFDocument.create();
+                for (let file of files) {
+                    const pdf = await PDFLib.PDFDocument.load(await file.arrayBuffer());
+                    const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                    copiedPages.forEach(page => mergedPdf.addPage(page));
+                }
+                downloadBlob(new Blob([await mergedPdf.save()], { type: 'application/pdf' }), getOutputName('mergeTool', 'Merged', 'pdf'));
+                updateLog('mergeLog', "Success! Document merged.");
+            } catch (err) { 
+                if(err.message && err.message.includes("encrypted")) updateLog('mergeLog', "Error: One of your files is password protected. Please unlock it first.", true);
+                else updateLog('mergeLog', err.message, true); 
+            }
+        };
+
+        window.splitPDF = async function() {
+            const files = appFiles['splitTool'];
+            if (files.length === 0) return updateLog('splitLog', "Queue a PDF first.", true);
+            const file = files[0];
+            const start = parseInt(document.getElementById('startPage').value);
+            const end = parseInt(document.getElementById('endPage').value);
+            if (start > end || start < 1) return updateLog('splitLog', "Invalid input range.", true);
+            updateLog('splitLog', "Extracting pages locally...");
+            try {
+                const originalPdf = await PDFLib.PDFDocument.load(await file.arrayBuffer());
+                const totalPages = originalPdf.getPageCount();
+                if (end > totalPages) return updateLog('splitLog', `Document only has ${totalPages} pages.`, true);
+                const newPdf = await PDFLib.PDFDocument.create();
+                const pageIndices = Array.from({length: (end - start) + 1}, (_, i) => (start - 1) + i);
+                const copiedPages = await newPdf.copyPages(originalPdf, pageIndices);
+                copiedPages.forEach(page => newPdf.addPage(page));
+                downloadBlob(new Blob([await newPdf.save()], { type: 'application/pdf' }), getOutputName('splitTool', `Pages_${start}-${end}`, 'pdf'));
+                updateLog('splitLog', "Success! Pages extracted.");
+            } catch (err) { 
+                if(err.message && err.message.includes("encrypted")) updateLog('splitLog', "Error: File is password protected.", true);
+                else updateLog('splitLog', err.message, true); 
+            }
+        };
+
+        window.imagesToPDF = async function() {
+            const files = appFiles['imgToPdfTool'];
+            if (files.length === 0) return updateLog('imgLog', "Queue images first.", true);
+            updateLog('imgLog', "Converting images locally...");
+            try {
+                const pdfDoc = await PDFLib.PDFDocument.create();
+                for (let file of files) {
+                    const imgBytes = await file.arrayBuffer();
+                    let img;
+                    if (file.type === 'image/jpeg') img = await pdfDoc.embedJpg(imgBytes);
+                    else if (file.type === 'image/png' || file.type === 'image/webp') img = await pdfDoc.embedPng(imgBytes);
+                    else continue; 
+                    
+                    const safeWidth = Math.ceil(img.width);
+                    const safeHeight = Math.ceil(img.height);
+                    const page = pdfDoc.addPage([safeWidth, safeHeight]);
+                    page.drawImage(img, { x: 0, y: 0, width: safeWidth, height: safeHeight });
+                }
+                downloadBlob(new Blob([await pdfDoc.save()], { type: 'application/pdf' }), getOutputName('imgToPdfTool', 'Converted', 'pdf'));
+                updateLog('imgLog', "Success! PDF generated.");
+            } catch (err) { updateLog('imgLog', err.message, true); }
+        };
+
+        window.processPdfToImage = async function() {
+            const files = appFiles['pdfToImgTool'];
+            if (files.length === 0) return updateLog('imageLog', "Queue a PDF first.", true);
+            const file = files[0];
+            updateLog('imageLog', "Analyzing document locally...");
+            try {
+                const fileURL = URL.createObjectURL(file);
+                const pdf = await pdfjsLib.getDocument(fileURL).promise;
+                if (pdf.numPages === 1) {
+                    updateLog('imageLog', "Single page detected. Rendering image...");
+                    const page = await pdf.getPage(1);
+                    const viewport = page.getViewport({ scale: 2.0 }); 
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.height = Math.ceil(viewport.height); 
+                    canvas.width = Math.ceil(viewport.width);
+                    
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                    canvas.toBlob((blob) => {
+                        downloadBlob(blob, getOutputName('pdfToImgTool', 'Extracted', 'png'));
+                        updateLog('imageLog', "Success! Image downloaded.");
+                    }, 'image/png', 1.0);
+                } else {
+                    updateLog('imageLog', `Rendering ${pdf.numPages} pages to ZIP...`);
+                    const zip = new JSZip();
+                    const folder = zip.folder("Tezz_Extracted_Pages");
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const viewport = page.getViewport({ scale: 2.0 }); 
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.height = Math.ceil(viewport.height); 
+                        canvas.width = Math.ceil(viewport.width);
+                        
+                        ctx.fillStyle = '#FFFFFF';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+                        folder.file(`Page_${i}.png`, blob);
+                    }
+                    const zipContent = await zip.generateAsync({ type: "blob" });
+                    downloadBlob(zipContent, getOutputName('pdfToImgTool', 'Archive', 'zip'));
+                    updateLog('imageLog', "Success! ZIP archive downloaded.");
+                }
+            } catch (err) { 
+                if(err.message && (err.message.includes("Password") || err.name === "PasswordException")) {
+                    updateLog('imageLog', "Error: File is password protected.", true);
+                } else { updateLog('imageLog', err.message, true); }
+            }
+        };
+
+        window.extractText = async function(format) {
+            const files = appFiles['pdfToTextTool'];
+            if (files.length === 0) return updateLog('docLog', "Queue a PDF first.", true);
+            const file = files[0];
+            updateLog('docLog', "Extracting text layers locally...");
+            try {
+                const fileURL = URL.createObjectURL(file);
+                const pdf = await pdfjsLib.getDocument(fileURL).promise;
+                let fullText = "";
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(" ");
+                    fullText += pageText + "\n\n";
+                }
+                if (!fullText.trim()) throw new Error("No readable text found. This might be a scanned image.");
+                if (format === 'txt') {
+                    downloadBlob(new Blob([fullText], { type: "text/plain;charset=utf-8" }), getOutputName('pdfToTextTool', 'Extracted', 'txt'));
+                } else if (format === 'doc') {
+                    const docHTML = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export</title></head><body><div style="font-family: Arial; white-space: pre-wrap;">${fullText.replace(/\n/g, "<br>")}</div></body></html>`;
+                    downloadBlob(new Blob(['\ufeff', docHTML], { type: 'application/msword' }), getOutputName('pdfToTextTool', 'Extracted', 'doc'));
+                }
+                updateLog('docLog', `Success! Extracted as .${format.toUpperCase()}`);
+            } catch (err) { 
+                if(err.message && (err.message.includes("Password") || err.name === "PasswordException")) {
+                    updateLog('docLog', "Error: File is password protected.", true);
+                } else { updateLog('docLog', err.message, true); }
+            }
+        };
+
+        // --- BULLETPROOF PDF TEXT GENERATOR (WITH WORD WRAPPING) ---
+        window.textToPDF = async function() {
+            const text = document.getElementById('textInput').value;
+            if (!text) return updateLog('textLog', "Text is empty.", true);
+            updateLog('textLog', "Generating centered document locally...");
+            try {
+                const pdfDoc = await PDFLib.PDFDocument.create();
+                let page = pdfDoc.addPage();
+                
+                const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+                const fontSize = 12;
+                let { width, height } = page.getSize();
+                const lineHeight = fontSize * 1.5;
+                const margin = 50;
+                const maxWidth = width - (margin * 2);
+                
+                const rawLines = text.split(/\r?\n/);
+                let lines = [];
+                for(let rLine of rawLines) {
+                    if(rLine.trim() === '') { lines.push(''); continue; }
+                    const words = rLine.split(/\s+/);
+                    let currentLine = words[0];
+                    for(let i=1; i<words.length; i++) {
+                        const word = words[i];
+                        const testLine = currentLine + " " + word;
+                        const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+                        if(testWidth <= maxWidth) {
+                            currentLine = testLine;
+                        } else {
+                            lines.push(currentLine);
+                            currentLine = word;
+                        }
+                    }
+                    lines.push(currentLine);
+                }
+
+                let currentY = height - margin; 
+
+                for (const line of lines) {
+                    if (currentY < margin) {
+                        page = pdfDoc.addPage();
+                        currentY = height - margin;
+                    }
+                    if (line.trim() !== '') {
+                        const textWidth = font.widthOfTextAtSize(line, fontSize);
+                        const x = (width - textWidth) / 2; 
+                        
+                        page.drawText(line, { 
+                            x: x, 
+                            y: currentY, 
+                            size: fontSize, 
+                            font: font,
+                            color: PDFLib.rgb(0, 0, 0) 
+                        });
+                    }
+                    currentY -= lineHeight; 
+                }
+
+                downloadBlob(new Blob([await pdfDoc.save()], { type: 'application/pdf' }), getOutputName('textTool', 'Document', 'pdf'));
+                updateLog('textLog', "Success! Document generated.");
+            } catch (err) { 
+                updateLog('textLog', err.message, true); 
+            }
+        };
+
+        // --- THE AI OCR ENGINE ---
+        window.runOCR = async function() {
+            const files = appFiles['ocrTool'];
+            if (files.length === 0) return updateLog('ocrLog', "Queue an Image or PDF first.", true);
+            const file = files[0];
+            const btn = document.getElementById('ocrBtn');
+            const outputArea = document.getElementById('ocrOutput');
+            
+            btn.innerText = "Loading AI Engine (May take a moment)...";
+            btn.disabled = true;
+            updateLog('ocrLog', "Downloading local AI dictionary. Please wait...");
+            outputArea.style.display = "none";
+            outputArea.value = "";
+
+            try {
+                let imageSource;
+                if (file.type === 'application/pdf') {
+                    updateLog('ocrLog', "Rendering PDF page for scanner...");
+                    const fileURL = URL.createObjectURL(file);
+                    const pdf = await pdfjsLib.getDocument(fileURL).promise;
+                    const page = await pdf.getPage(1);
+                    const viewport = page.getViewport({ scale: 2.5 }); 
+                    const canvas = document.createElement('canvas');
+                    canvas.height = Math.ceil(viewport.height); 
+                    canvas.width = Math.ceil(viewport.width);
+                    const ctx = canvas.getContext('2d');
+                    
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                    imageSource = canvas;
+                } else {
+                    imageSource = file; 
+                }
+
+                updateLog('ocrLog', "Scanning image for text... This happens entirely in your RAM.");
+                btn.innerText = "Scanning Image...";
+
+                const worker = await Tesseract.createWorker('eng');
+                const { data: { text } } = await worker.recognize(imageSource);
+                await worker.terminate();
+
+                if(text.trim() === "") throw new Error("No readable text found in the document.");
+
+                outputArea.value = text;
+                outputArea.style.display = "block";
+                updateLog('ocrLog', "Success! Text extracted below. You can copy it now.", false);
+
+            } catch (err) { 
+                if(err.message && (err.message.includes("Password") || err.name === "PasswordException")) {
+                    updateLog('ocrLog', "Error: File is password protected.", true);
+                } else { 
+                    updateLog('ocrLog', "OCR Error: " + (err.message || "Could not read file."), true); 
+                }
+            } finally {
+                btn.innerText = "Scan & Extract Text";
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
